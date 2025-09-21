@@ -1,0 +1,37 @@
+/* Globales */
+html{
+    font-size: 62.5%;
+    box-sizing: border-box; /* Hack para Box Model */
+    scroll-snap-type: y mandatory;
+}
+
+*, *::before, *::after{
+    box-sizing: inherit;
+}
+
+body{
+    font-size: 16px; /* 1rem = 10px*/
+    font-family: "Krub", sans-serif;
+}
+
+h1{
+    font-size: 8rem;
+}
+
+.image{
+    height: 5%;
+    width: 5%;
+}
+
+.content{
+    min-height: 18em;
+    min-width: fit-content;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 5px 15px 10px rgba(0, 0, 0, 0.2);
+    transition: box-shadow 0.3s ease;
+}
+.content:hover{
+    box-shadow: 5px 15px 10px rgba(0, 0, 0, 0.295);
+}
