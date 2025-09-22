@@ -57,9 +57,9 @@ main {
 /* Área de cámara */
 .camera-container {
     width: 100%;
-    height: 60rem;
+    height: 100%;
     background: #e9ecef;
-    border: 2px dashed #aaa;
+    object-fit: cover;
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -98,7 +98,7 @@ main {
     color: white;
     font-size: 3rem;
     cursor: pointer;
-    margin-bottom: 5rem;
+    margin-bottom: 1rem;
     transition: transform 0.3s ease, background 0.3s ease;
     margin-top: 0;
 }
@@ -158,7 +158,7 @@ main {
 .record-container {
   display: flex;
   justify-content: center; /* lo centra horizontalmente */
-  margin-top: 20px;        /* espacio con respecto al rectángulo */
+  margin-top: 0;        /* espacio con respecto al rectángulo */
 }
 
 /* Columna izquierda con cámara y botón */
@@ -174,4 +174,15 @@ main {
 .record-button:hover {
     background: rgb(255, 13, 13);
     transform: scale(1.1); /* se agranda un poquito */
+}
+
+#camera-video {
+    width: 70rem;
+    height: 50rem;
+    object-fit: cover;  /* llena el espacio sin deformarse */
+    border-radius: 10px;
+}
+
+.activate-button.wide {
+    min-width: 30rem; /* un poquito más ancho */
 }

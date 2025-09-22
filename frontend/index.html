@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="normalize.css">
     <link rel="stylesheet" href="styles.css">
+    <script defer src="script.js"></script>
     <title>TLSC</title>
     <link rel="icon" href="../Frontend/img/favicon.png" type="icon">
 </head>
@@ -21,9 +22,10 @@
     <div class="left-panel">
         <div class="camera-container">
             <div class="camera-img">
-                <img src="../frontend/img/camara.png" alt="Cámara">
+                <img id="camera-placeholder" src="../frontend/img/camara.png" alt="Cámara">
+                <video id="camera-video" autoplay playsinline style="display:none;"></video>
             </div>
-            <button class="activate-button">Activar Cámara</button>
+            <button id="toggle-camera" class="activate-button">Activar Cámara</button>
         </div>
         <div class="record-container">
             <button class="record-button"></button>
