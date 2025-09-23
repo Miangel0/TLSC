@@ -1,7 +1,7 @@
 import numpy as np
 from model import get_model
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.callbacks import EarlyStopping
+from keras.preprocessing.sequence import pad_sequences
+from keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
 from keras.utils import to_categorical
 from helpers import get_word_ids, get_sequences_and_labels
@@ -11,6 +11,8 @@ def training_model(model_path, epochs=500):
     word_ids = get_word_ids(WORDS_JSON_PATH ) # ['word1', 'word2', 'word3]
     sequences, labels = get_sequences_and_labels(word_ids)
     
+    # Si cada secuencia es 1D, conviértela a 2D
+    sequences = [np.array(seq).reshape(-1, 1662) for seq in sequences]
     sequences = pad_sequences(sequences, maxlen=int(MODEL_FRAMES), padding='pre', truncating='post', dtype='float16')
     
     X = np.array(sequences)
@@ -27,4 +29,3 @@ def training_model(model_path, epochs=500):
 
 if __name__ == "__main__":
     training_model(MODEL_PATH)
-    

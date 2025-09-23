@@ -81,19 +81,15 @@ def extract_keypoints(results):
     rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() if results.right_hand_landmarks else np.zeros(21*3)
     return np.concatenate([pose, face, lh, rh])
 
-def get_keypoints(model, sample_path):
+def get_keypoints(model, img_path):
     '''
-    ### OBTENER KEYPOINTS DE LA MUESTRA
-    Retorna la secuencia de keypoints de la muestra
+    ### OBTENER KEYPOINTS DE UNA IMAGEN
+    Retorna los keypoints de una sola imagen
     '''
-    kp_seq = np.array([])
-    for img_name in os.listdir(sample_path):
-        img_path = os.path.join(sample_path, img_name)
-        frame = cv2.imread(img_path)
-        results = mediapipe_detection(frame, model)
-        kp_frame = extract_keypoints(results)
-        kp_seq = np.concatenate([kp_seq, [kp_frame]] if kp_seq.size > 0 else [[kp_frame]])
-    return kp_seq
+    frame = cv2.imread(img_path)
+    results = mediapipe_detection(frame, model)
+    kp_frame = extract_keypoints(results)
+    return kp_frame
 
 def insert_keypoints_sequence(df, n_sample:int, kp_seq):
     '''

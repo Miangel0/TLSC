@@ -14,7 +14,10 @@ def create_keypoints(word_id, words_path, hdf_path):
     
     with Holistic() as holistic:
         print(f'Creando keypoints de "{word_id}"...')
-        sample_list = os.listdir(frames_path)
+        sample_list = [
+            f for f in os.listdir(frames_path)
+            if os.path.isfile(os.path.join(frames_path, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg'))
+        ]
         sample_count = len(sample_list)
         
         for n_sample, sample_name in enumerate(sample_list, start=1):

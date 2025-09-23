@@ -1,25 +1,25 @@
 {
-    "word_ids":[
-        
-        "buenos_dias"
-    ],
-
-    "word_ids1":[
-        "adios",
-        "bien",
-        "buenas_noches",
-        "buenas_tardes",
-        "buenos_dias",
-        "como_estas",
-        "disculpa",
-        "gracias",
-        "hola-der",
-        "hola-izq",
-        "mal",
-        "mas_o_menos",
-        "me_ayudas",
-        "por_favor"
+    "word_ids": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "i",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "p",
+        "q",
+        "r",
+        "t",
+        "u",
+        "v",
+        "w",
+        "x",
+        "y"
     ]
 }
-
-
