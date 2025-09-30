@@ -1,40 +1,27 @@
 const toggleButton = document.getElementById('toggle-camera');
-const video = document.getElementById('camera-video');
 const placeholder = document.getElementById('camera-placeholder');
-let stream = null;
+const streamImg = document.getElementById('camera-stream');
+
+let cameraActive = false;
 
 toggleButton.addEventListener('click', async () => {
-    if (!stream) {
-        try {
-            // Pedir acceso a la cámara
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = stream;
+    if (!cameraActive) {
+        // Activar cámara → pedir el stream al backend
+        streamImg.src = "http://localhost:5000/video_feed";
+        streamImg.style.display = 'block';
+        placeholder.style.display = 'none';
 
-            // Mostrar video y ocultar imagen
-            video.style.display = 'block';
-            placeholder.style.display = 'none';
-
-            // Cambiar texto y ancho del botón
-            toggleButton.textContent = "Desactivar cámara";
-            toggleButton.classList.add("wide");
-
-            // Mover botón debajo del video (opcional)
-            toggleButton.style.marginTop = '10px';
-
-        } catch (err) {
-            alert('No se pudo acceder a la cámara: ' + err);
-        }
+        toggleButton.textContent = "Desactivar cámara";
+        toggleButton.classList.add("wide");
+        cameraActive = true;
     } else {
-        // Detener la cámara
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-
-        // Ocultar video y mostrar imagen
-        video.style.display = 'none';
+        // Desactivar cámara → cortar la conexión
+        streamImg.src = ""; // Detiene el request
+        streamImg.style.display = 'none';
         placeholder.style.display = 'block';
 
-        // Cambiar texto y volver al tamaño original
-        toggleButton.textContent = "Activar Cámara";
+        toggleButton.textContent = "Activar cámara";
         toggleButton.classList.remove("wide");
+        cameraActive = false;
     }
 });

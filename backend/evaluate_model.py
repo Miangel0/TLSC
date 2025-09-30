@@ -7,7 +7,7 @@ from keras.models import load_model
 from helpers import *
 from constants import *
 
-def evaluate_model(src=None):
+def evaluate_model(src=0):
     # Cargar clases
     with open(WORDS_JSON_PATH, "r", encoding="utf-8") as f:
         word_ids = json.load(f)
@@ -22,12 +22,10 @@ def evaluate_model(src=None):
     def scale_input(x):
         return (x - mean) / scale
 
+    cap = cv2.VideoCapture(src)
     with Hands() as hands_model:
-        video = cv2.VideoCapture(src or 0)
-        sentence = []
-
-        while video.isOpened():
-            ret, frame = video.read()
+        while True:
+            ret, frame = cap.read()
             if not ret:
                 break
 
@@ -40,28 +38,53 @@ def evaluate_model(src=None):
                 # Predicción
                 res = model.predict(np.expand_dims(kp_frame, axis=0), verbose=0)[0]
 
-                # Imprimir todas las probabilidades en consola
-                probs = {word_ids[i]: float(res[i]) for i in range(len(word_ids))}
-                """ print("Probabilidades:", probs) """
-
-                # Seleccionar la letra más probable
+                # Seleccionar la palabra más probable
                 best_idx = np.argmax(res)
                 word_id = word_ids[best_idx]
                 sent = words_text.get(word_id, word_id.upper())
-                sentence = [sent]
 
-                # Mostrar en pantalla
-                cv2.rectangle(frame, (0, 0), (640, 35), (245, 117, 16), -1)
-                cv2.putText(frame, f"{sent} ({res[best_idx]:.2f})", FONT_POS, FONT, FONT_SIZE, (255, 255, 255))
+                # === MEJORAS VISUALES ===
+
+                # Barra superior semitransparente
+                overlay = frame.copy()
+                cv2.rectangle(overlay, (0, 0), (640, 70), (0, 0, 0), -1)
+                alpha = 0.6
+                frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
+
+                # Texto centrado con letra más grande
+                text = f"{sent} ({res[best_idx]:.2f})"
+                font_scale = 1.2  # más grande
+                thickness = 3
+                (text_w, text_h), _ = cv2.getTextSize(text, FONT, font_scale, thickness)
+
+                x = (frame.shape[1] - text_w) // 2  # centrado horizontal
+                y = 45  # un poco abajo de la barra
+
+                # sombra
+                cv2.putText(frame, text, (x+2, y+2), FONT, font_scale, (0, 0, 0), thickness+1, cv2.LINE_AA)
+                # texto principal
+                cv2.putText(frame, text, (x, y), FONT, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+
+                # Barra de probabilidad debajo del texto
+                bar_width, bar_height = 300, 20
+                bar_x = (frame.shape[1] - bar_width) // 2  # centrado
+                bar_y = 60
+
+                prob = res[best_idx]
+                cv2.rectangle(frame, (bar_x, bar_y), (bar_x + bar_width, bar_y + bar_height), (255, 255, 255), 2)
+                cv2.rectangle(frame, (bar_x, bar_y),
+                              (bar_x + int(bar_width * prob), bar_y + bar_height),
+                              (0, 255, 0), -1)
+
+                # Dibujar keypoints en la mano
                 draw_keypoints(frame, results)
 
-            cv2.imshow('Traductor LSC', frame)
-            if cv2.waitKey(10) & 0xFF == ord('q'):
-                break
+            # Codificar frame como JPEG
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame_bytes = buffer.tobytes()
 
-        video.release()
-        cv2.destroyAllWindows()
-        return sentence
+            # Enviar frame al navegador
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
-if __name__ == "__main__":
-    evaluate_model()
+    cap.release()
