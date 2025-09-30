@@ -1,46 +1,55 @@
 import os
+import cv2
+import numpy as np
 import pandas as pd
-from mediapipe.python.solutions.holistic import Holistic
-from helpers import *
-from constants import *
+from mediapipe.python.solutions.hands import Hands
+from constants import KEYPOINTS_PATH, FRAME_ACTIONS_PATH
+from helpers import get_keypoints, create_folder, mediapipe_detection  # get_keypoints usa mediapipe_detection y extract_keypoints
 
-def create_keypoints(word_id, words_path, hdf_path):
-    '''
-    ### CREAR KEYPOINTS PARA UNA PALABRA
-    Recorre la carpeta de frames de la palabra y guarda sus keypoints en `hdf_path`
-    '''
-    data = pd.DataFrame([])
-    frames_path = os.path.join(words_path, word_id)
-    
-    with Holistic() as holistic:
-        print(f'Creando keypoints de "{word_id}"...')
-        sample_list = [
-            f for f in os.listdir(frames_path)
-            if os.path.isfile(os.path.join(frames_path, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg'))
-        ]
-        sample_count = len(sample_list)
-        
-        for n_sample, sample_name in enumerate(sample_list, start=1):
-            sample_path = os.path.join(frames_path, sample_name)
-            keypoints_sequence = get_keypoints(holistic, sample_path)
-            data = insert_keypoints_sequence(data, n_sample, keypoints_sequence)
-            print(f"{n_sample}/{sample_count}", end="\r")
+def create_keypoints(word, words_path, hdf_path):
+    """
+    Crea un .h5 con los keypoints (vectores de 63 valores) para la clase `word`.
+    words_path: carpeta que contiene subcarpetas por palabra (ej. frame_actions/a)
+    hdf_path: ruta destino para guardar KEYPOINTS_PATH/<word>.h5
+    """
+    frames_dir = os.path.join(words_path, word)
+    if not os.path.exists(frames_dir):
+        print(f"⚠️  Carpeta no encontrada: {frames_dir} -> se omite '{word}'")
+        return
 
-    data.to_hdf(hdf_path, key="data", mode="w")
-    print(f"Keypoints creados! ({sample_count} muestras)", end="\n")
+    image_files = sorted([
+        f for f in os.listdir(frames_dir)
+        if os.path.isfile(os.path.join(frames_dir, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg'))
+    ])
+
+    if len(image_files) == 0:
+        print(f"⚠️  No hay imágenes en: {frames_dir}")
+        return
+
+    keypoints_list = []
+
+    # Usamos Hands en modo imagen (static_image_mode=True) porque procesamos fotos
+    with Hands(static_image_mode=True, max_num_hands=1, min_detection_confidence=0.5) as hands:
+        for i, fname in enumerate(image_files, start=1):
+            img_path = os.path.join(frames_dir, fname)
+            # get_keypoints espera (model, img_path) y devuelve vector (63,)
+            kp = get_keypoints(hands, img_path)
+            keypoints_list.append(kp)
+            print(f"{word}: {i}/{len(image_files)}", end="\r")
+
+    # Guardar en HDF5 como una columna 'keypoints' (cada fila = vector 63)
+    os.makedirs(os.path.dirname(hdf_path) or KEYPOINTS_PATH, exist_ok=True)
+    df = pd.DataFrame({'keypoints': keypoints_list})
+    df.to_hdf(hdf_path, key='data', mode='w')
+    print(f"\n✅ Keypoints creados para '{word}' -> {len(keypoints_list)} muestras -> {hdf_path}")
 
 
 if __name__ == "__main__":
-    # Crea la carpeta `keypoints` en caso no exista
+    # Asegura carpeta de salida
     create_folder(KEYPOINTS_PATH)
-    
-    # GENERAR TODAS LAS PALABRAS
-    word_ids = [word for word in os.listdir(os.path.join(ROOT_PATH, FRAME_ACTIONS_PATH))]
-    
-    # GENERAR PARA UNA PALABRA O CONJUNTO
-    # word_ids = ["bien"]
-    # word_ids = ["buenos_dias", "como_estas", "disculpa", "gracias", "hola-der", "hola-izq", "mal", "mas_o_menos", "me_ayudas", "por_favor"]
-    
-    for word_id in word_ids:
-        hdf_path = os.path.join(KEYPOINTS_PATH, f"{word_id}.h5")
-        create_keypoints(word_id, FRAME_ACTIONS_PATH, hdf_path)
+
+    # Lista de palabras (carpetas) en frame_actions
+    word_ids = [w for w in os.listdir(os.path.join(os.getcwd(), FRAME_ACTIONS_PATH))]
+    for word in word_ids:
+        hdf_path = os.path.join(KEYPOINTS_PATH, f"{word}.h5")
+        create_keypoints(word, FRAME_ACTIONS_PATH, hdf_path)

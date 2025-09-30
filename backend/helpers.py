@@ -1,10 +1,10 @@
 import json
 import os
 import cv2
-from mediapipe.python.solutions.holistic import FACEMESH_CONTOURS, POSE_CONNECTIONS, HAND_CONNECTIONS
-from mediapipe.python.solutions.drawing_utils import draw_landmarks, DrawingSpec
 import numpy as np
 import pandas as pd
+from mediapipe.python.solutions.drawing_utils import draw_landmarks, DrawingSpec
+from mediapipe.python.solutions.hands import HAND_CONNECTIONS
 from typing import NamedTuple
 from constants import *
 
@@ -16,15 +16,13 @@ def mediapipe_detection(image, model):
     return results
 
 def create_folder(path):
-    '''
-    ### CREAR CARPETA SI NO EXISTE
-    Si ya existe, no hace nada.
-    '''
+    """Crear carpeta si no existe"""
     if not os.path.exists(path):
         os.makedirs(path)
 
 def there_hand(results: NamedTuple) -> bool:
-    return results.left_hand_landmarks or results.right_hand_landmarks
+    """Verifica si se detectó al menos una mano"""
+    return bool(results.multi_hand_landmarks)
 
 def get_word_ids(path):
     with open(path, 'r') as json_file:
@@ -32,41 +30,17 @@ def get_word_ids(path):
         return data.get('word_ids')
 
 # CAPTURE SAMPLES
-def draw_keypoints(image, results):
-    '''
-    Dibuja los keypoints en la imagen
-    '''
-    draw_landmarks(
-        image,
-        results.face_landmarks,
-        FACEMESH_CONTOURS,
-        DrawingSpec(color=(80, 110, 10), thickness=1, circle_radius=1),
-        DrawingSpec(color=(80, 256, 121), thickness=1, circle_radius=1),
-    )
-    # Draw pose connections
-    draw_landmarks(
-        image,
-        results.pose_landmarks,
-        POSE_CONNECTIONS,
-        DrawingSpec(color=(80, 22, 10), thickness=2, circle_radius=4),
-        DrawingSpec(color=(80, 44, 121), thickness=2, circle_radius=2),
-    )
-    # Draw left hand connections
-    draw_landmarks(
-        image,
-        results.left_hand_landmarks,
-        HAND_CONNECTIONS,
-        DrawingSpec(color=(121, 22, 76), thickness=2, circle_radius=4),
-        DrawingSpec(color=(121, 44, 250), thickness=2, circle_radius=2),
-    )
-    # Draw right hand connections
-    draw_landmarks(
-        image,
-        results.right_hand_landmarks,
-        HAND_CONNECTIONS,
-        DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=4),
-        DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2),
-    )
+def draw_keypoints(image, results, mode="hands"):
+    """Dibuja los keypoints de la mano"""
+    if results.multi_hand_landmarks:
+        for hand_landmarks in results.multi_hand_landmarks:
+            draw_landmarks(
+                image,
+                hand_landmarks,
+                HAND_CONNECTIONS,
+                DrawingSpec(color=(121, 22, 76), thickness=2, circle_radius=4),
+                DrawingSpec(color=(121, 44, 250), thickness=2, circle_radius=2),
+            )
 
 def save_frames(frames, output_folder):
     for num_frame, frame in enumerate(frames):
@@ -75,44 +49,45 @@ def save_frames(frames, output_folder):
 
 # CREATE KEYPOINTS
 def extract_keypoints(results):
-    pose = np.array([[res.x, res.y, res.z, res.visibility] for res in results.pose_landmarks.landmark]).flatten() if results.pose_landmarks else np.zeros(33*4)
-    face = np.array([[res.x, res.y, res.z] for res in results.face_landmarks.landmark]).flatten() if results.face_landmarks else np.zeros(468*3)
-    lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]).flatten() if results.left_hand_landmarks else np.zeros(21*3)
-    rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() if results.right_hand_landmarks else np.zeros(21*3)
-    return np.concatenate([pose, face, lh, rh])
+    """Extrae keypoints de una sola mano"""
+    if results.multi_hand_landmarks:
+        hand_landmarks = results.multi_hand_landmarks[0]  # solo la primera mano
+        keypoints = [[lm.x, lm.y, lm.z] for lm in hand_landmarks.landmark]
+        return np.array(keypoints).flatten()  # 63 valores
+    else:
+        return np.zeros(63)  # 21 puntos * 3 coords
 
 def get_keypoints(model, img_path):
-    '''
-    ### OBTENER KEYPOINTS DE UNA IMAGEN
-    Retorna los keypoints de una sola imagen
-    '''
+    """Obtiene keypoints de una imagen"""
     frame = cv2.imread(img_path)
     results = mediapipe_detection(frame, model)
     kp_frame = extract_keypoints(results)
     return kp_frame
 
 def insert_keypoints_sequence(df, n_sample:int, kp_seq):
-    '''
-    ### INSERTA LOS KEYPOINTS DE LA MUESTRA AL DATAFRAME
-    Retorna el mismo DataFrame pero con los keypoints de la muestra agregados
-    '''
+    """Inserta los keypoints de una muestra al DataFrame"""
     for frame, keypoints in enumerate(kp_seq):
         data = {'sample': n_sample, 'frame': frame + 1, 'keypoints': [keypoints]}
         df_keypoints = pd.DataFrame(data)
         df = pd.concat([df, df_keypoints])
-    
     return df
 
 # TRAINING MODEL
-def get_sequences_and_labels(words_id):
+def get_sequences_and_labels(word_ids):
+    """Carga todos los keypoints de cada clase desde los .h5"""
     sequences, labels = [], []
     
-    for word_index, word_id in enumerate(words_id):
-        hdf_path = os.path.join(KEYPOINTS_PATH, f"{word_id}.h5")
-        data = pd.read_hdf(hdf_path, key='data')
-        for _, df_sample in data.groupby('sample'):
-            seq_keypoints = [fila['keypoints'] for _, fila in df_sample.iterrows()]
-            sequences.append(seq_keypoints)
-            labels.append(word_index)
-                    
+    for idx, word in enumerate(word_ids):
+        hdf_path = os.path.join(KEYPOINTS_PATH, f"{word}.h5")
+        if not os.path.exists(hdf_path):
+            print(f"⚠️ No se encontró {hdf_path}, se omite esta clase")
+            continue
+        
+        data = pd.read_hdf(hdf_path, key="data")
+        
+        # 'keypoints' se guardó como vector numpy (63,)
+        for kp in data["keypoints"]:
+            sequences.append(np.array(kp, dtype=np.float32))
+            labels.append(idx)
+
     return sequences, labels

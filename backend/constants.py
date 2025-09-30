@@ -3,7 +3,7 @@ import cv2
 
 # SETTINGS
 MIN_LENGTH_FRAMES = 5
-LENGTH_KEYPOINTS = 1662
+LENGTH_KEYPOINTS = 63
 MODEL_FRAMES = 15
 
 # PATHS
@@ -21,18 +21,27 @@ FONT = cv2.FONT_HERSHEY_PLAIN
 FONT_SIZE = 1.5
 FONT_POS = (5, 30)
 
+# Diccionario de letras A-Y excluyendo g, h, j, s, z
 words_text = {
-    "adios": "ADIÓS",
-    "bien": "BIEN",
-    "buenas_noches": "BUENAS NOCHES",
-    "buenas_tardes": "BUENAS TARDES",
-    "buenos_dias": "BUENOS DÍAS",
-    "como_estas": "COMO ESTÁS",
-    "disculpa": "DISCULPA",
-    "gracias": "GRACIAS",
-    "hola": "HOLA",
-    "mal": "MAL",
-    "mas_o_menos": "MAS O MENOS",
-    "me_ayudas": "ME AYUDAS",
-    "por_favor": "POR FAVOR",
+    "a": "A",
+    "b": "B",
+    "c": "C",
+    "d": "D",
+    "e": "E",
+    "f": "F",
+    "i": "I",
+    "k": "K",
+    "l": "L",
+    "m": "M",
+    "n": "N",
+    "o": "O",
+    "p": "P",
+    "q": "Q",
+    "r": "R",
+    "t": "T",
+    "u": "U",
+    "v": "V",
+    "w": "W",
+    "x": "X",
+    "y": "Y",
 }
